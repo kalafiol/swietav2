@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magia Świąt dla Iwony i Damiana</title>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #ffd700;
+            --red: #b20a0c;
+            --white: #ffffff;
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; font-family: 'Montserrat', sans-serif;
+            background: #050505;
+        }
+
+        /* Tło z lampionami/śniegiem */
+        #bg-canvas {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #1b2735 0%, #090a0f 100%);
+            z-index: 1;
+        }
+
+        /* Błysk przy otwarciu */
+        #flash {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; z-index: 100; opacity: 0; pointer-events: none;
+        }
+
+        .content {
+            position: relative; z-index: 10;
+            width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        /* Intro Button */
+        .start-btn {
+            padding: 20px 50px; font-size: 2rem;
+            background: var(--red); color: white;
+            border: 3px solid var(--gold); border-radius: 50px;
+            cursor: pointer; font-family: 'Great Vibes', cursive;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+            transition: 0.5s;
+        }
+        .start-btn:hover { transform: scale(1.1); box-shadow: 0 0 50px var(--gold); }
+
+        /* PREZENT 3D ROZKŁADANY */
+        #gift-scene {
+            display: none; position: relative;
+            width: 200px; height: 200px;
+            perspective: 1000px; cursor: pointer;
+        }
+
+        .box {
+            position: relative; width: 200px; height: 200px;
+            transform-style: preserve-3d;
+            transform: rotateX(-20deg) rotateY(45deg);
+            transition: transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .box-side {
+            position: absolute; width: 200px; height: 200px;
+            background: var(--red); border: 2px solid #800000;
+            transition: all 0.8s ease-in;
+        }
+
+        /* Wstążki */
+        .box-side::after {
+            content: ''; position: absolute; background: var(--gold);
+            width: 40px; height: 100%; left: 80px;
+        }
+        .side-top::after { width: 100%; height: 40px; top: 80px; left: 0; }
+
+        .side-front  { transform: translateZ(100px); }
+        .side-back   { transform: rotateY(180deg) translateZ(100px); }
+        .side-right  { transform: rotateY(90deg) translateZ(100px); }
+        .side-left   { transform: rotateY(-90deg) translateZ(100px); }
+        .side-bottom { transform: rotateX(-90deg) translateZ(100px); background: #600; }
+        .side-top    { 
+            transform: rotateX(90deg) translateZ(100px); 
+            background: #d42426; z-index: 2;
+        }
+
+        /* Animacja otwarcia */
+        .opened .side-top { transform: rotateX(90deg) translateZ(400px); opacity: 0; }
+        .opened .side-front { transform: rotateX(-90deg) translateZ(100px) translateY(100px); opacity: 0; }
+        .opened .side-back { transform: rotateX(90deg) translateZ(100px) translateY(-100px); opacity: 0; }
+        .opened .side-left { transform: rotateY(-90deg) rotateX(-90deg) translateZ(100px) translateY(100px); opacity: 0; }
+        .opened .side-right { transform: rotateY(90deg) rotateX(-90deg) translateZ(100px) translateY(100px); opacity: 0; }
+
+        /* KARTA ŻYCZEŃ (Glassmorphism) */
+        #card {
+            display: none; position: absolute;
+            width: 90%; max-width: 650px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(255, 215, 0, 0.4);
+            border-radius: 30px; padding: 40px;
+            text-align: center; color: white;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            opacity: 0; transform: scale(0.5);
+            transition: all 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #card.show { opacity: 1; transform: scale(1); }
+
+        h1 { font-family: 'Great Vibes', cursive; font-size: 4rem; color: var(--gold); margin: 0; }
+        .typing-container { font-size: 1.4rem; line-height: 1.6; margin: 25px 0; min-height: 100px; }
+        .signature { font-family: 'Great Vibes', cursive; font-size: 2.5rem; color: var(--gold); opacity: 0; transition: 1.5s; }
+
+    </style>
+</head>
+<body>
+
+    <div id="flash"></div>
+    <canvas id="bg-canvas"></canvas>
+    
+    <audio id="music" loop>
+        <source src="https://upload.wikimedia.org/wikipedia/commons/e/e6/We_Wish_You_a_Merry_Christmas.ogg" type="audio/ogg">
+    </audio>
+
+    <div class="content">
+        <div id="intro">
+            <h1 style="color:white; margin-bottom: 20px;">Świąteczna Niespodzianka</h1>
+            <button class="start-btn" onclick="initMagic()">Otwórz Magię</button>
+        </div>
+
+        <div id="gift-scene" onclick="explodeGift()">
+            <div class="box" id="mainBox">
+                <div class="box-side side-front"></div>
+                <div class="box-side side-back"></div>
+                <div class="box-side side-left"></div>
+                <div class="box-side side-right"></div>
+                <div class="box-side side-top"></div>
+                <div class="box-side side-bottom"></div>
+            </div>
+        </div>
+
+        <div id="card">
+            <h1>Wesołych Świąt!</h1>
+            <p style="font-size: 1.1rem; letter-spacing: 2px;">Dla Mamy Iwony i Damiana</p>
+            <div class="typing-container" id="textTarget"></div>
+            <div class="signature" id="sig">Życzy Kuba</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height, particles = [];
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // System cząsteczek (śnieg + iskry)
+        class Particle {
+            constructor(x, y, color, speed, size) {
+                this.x = x; this.y = y;
+                this.color = color;
+                this.speed = speed;
+                this.size = size;
+                this.vx = (Math.random() - 0.5) * 10;
+                this.vy = (Math.random() - 0.5) * 10;
+                this.alpha = 1;
+            }
+            updateSnow() {
+                this.y += this.speed;
+                if(this.y > height) this.y = -10;
+            }
+            updateSpark() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.1; // grawitacja
+                this.alpha -= 0.01;
+            }
+            draw() {
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+                ctx.fill();
+            }
+        }
+
+        // Inicjalizacja śniegu
+        for(let i=0; i<100; i++) {
+            particles.push(new Particle(Math.random()*width, Math.random()*height, "white", Math.random()*2+1, Math.random()*3+1));
+        }
+
+        function animate() {
+            ctx.clearRect(0,0,width,height);
+            particles.forEach((p, index) => {
+                if(p.color === "white") p.updateSnow();
+                else {
+                    p.updateSpark();
+                    if(p.alpha <= 0) particles.splice(index, 1);
+                }
+                p.draw();
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        function initMagic() {
+            document.getElementById('music').play();
+            document.getElementById('intro').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('intro').style.display = 'none';
+                document.getElementById('gift-scene').style.display = 'block';
+            }, 500);
+        }
+
+        function explodeGift() {
+            const box = document.getElementById('mainBox');
+            const flash = document.getElementById('flash');
+            
+            // 1. Animacja pudełka
+            box.parentElement.classList.add('opened');
+            
+            // 2. Błysk
+            flash.style.opacity = '1';
+            
+            // 3. Stworzenie złotych iskier
+            for(let i=0; i<80; i++) {
+                particles.push(new Particle(width/2, height/2, "#ffd700", 0, Math.random()*4+2));
+            }
+
+            setTimeout(() => {
+                flash.style.opacity = '0';
+                flash.style.transition = 'opacity 1s';
+                
+                // 4. Pokaż kartę
+                document.getElementById('gift-scene').style.display = 'none';
+                const card = document.getElementById('card');
+                card.style.display = 'block';
+                setTimeout(() => {
+                    card.classList.add('show');
+                    typeWriter();
+                }, 100);
+            }, 300);
+        }
+
+        const msg = "Niech ta magiczna noc przyniesie Wam spokój, a blask choinki rozświetli każdą wspólną chwilę. Życzę Wam zdrowia, które jest najważniejsze, oraz marzeń, które dodają skrzydeł. Wesołych Świąt!";
+        let charIndex = 0;
+
+        function typeWriter() {
+            if (charIndex < msg.length) {
+                document.getElementById('textTarget').innerHTML += msg.charAt(charIndex);
+                charIndex++;
+                setTimeout(typeWriter, 50);
+            } else {
+                document.getElementById('sig').style.opacity = '1';
+            }
+        }
+    </script>
+</body>
+</html>
